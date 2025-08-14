@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Online Quiz Maker</title>
+  <style>
+    :root{
+      --bg:#96979a; --panel:#121a2b; --muted:#8aa0c2; --text:#e6edf7; --accent:#6aa5ff; --accent-2:#7cfaa2; --danger:#ff6b6b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,"Helvetica Neue",Arial; background:var(--bg); color:var(--text);}
+    a{color:var(--accent)}
+    .container{max-width:1100px; margin:0 auto; padding:16px}
+    header{position:sticky; top:0; z-index:10; background:rgba(11,18,32,.75); backdrop-filter: blur(8px); border-bottom:1px solid rgba(138,160,194,.15)}
+    .row{display:flex; gap:12px; flex-wrap:wrap}
+    .grow{flex:1}
+    .center{display:flex; align-items:center; justify-content:center}
+    .card{background:var(--panel); border:1px solid rgba(138,160,194,.15); border-radius:16px; padding:16px; box-shadow: 0 10px 20px rgba(0,0,0,.25)}
+    .btn{border:none; border-radius:12px; padding:10px 14px; background:var(--accent); color:#081226; font-weight:600; cursor:pointer}
+    .btn.secondary{background:#1f2a44; color:var(--text); border:1px solid rgba(138,160,194,.2)}
+    .btn.ghost{background:transparent; color:var(--text); border:1px solid rgba(138,160,194,.25)}
+    .btn.danger{background:var(--danger); color:#fff}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    input, select, textarea{width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(138,160,194,.25); background:#0e1728; color:var(--text)}
+    label{display:block; font-size:.9rem; color:var(--muted); margin-bottom:6px}
+    .muted{color:var(--muted)}
+    .title{font-size: clamp(22px, 4vw, 32px); margin:8px 0}
+    .subtitle{font-size: 14px; color:var(--muted)}
+    .grid{display:grid; gap:14px}
+    @media(min-width:768px){ .grid-2{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns: repeat(3, 1fr)} }
+    nav .btn{padding:8px 12px}
+    .tag{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:#17233b; border:1px solid rgba(138,160,194,.2); color:var(--muted); font-size:12px}
+    .list{display:grid; gap:12px}
+    .hidden{display:none !important}
+    .options{display:grid; gap:8px}
+    .option{display:flex; gap:8px; align-items:center; background:#0f182a; border:1px solid rgba(138,160,194,.18); padding:10px; border-radius:12px}
+    .progress-wrap{height:8px; background:#0e1730; border-radius:999px; border:1px solid rgba(138,160,194,.2)}
+    .progress{height:6px; background:linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius:999px}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#17233b; font-size:12px; border:1px solid rgba(138,160,194,.2)}
+    .footer{margin-top:40px; padding:24px 0; color:var(--muted); text-align:center; border-top:1px dashed rgba(138,160,194,.2)}
+    .kbd{border:1px solid rgba(138,160,194,.3); padding:1px 6px; border-radius:6px; background:#0a1325; font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container row" style="align-items:center; justify-content:space-between; gap:8px">
+      <div class="row" style="align-items:center">
+        <strong style="font-size:18px">🧠 Online Quiz Maker</strong>
+        <span class="tag">No backend • LocalStorage</span>
+      </div>
+      <nav class="row" id="navActions">
+        <button class="btn ghost" data-nav="home">Home</button>
+        <button class="btn ghost" data-nav="list">Quizzes</button>
+        <button class="btn ghost" data-nav="create">Create</button>
+        <span id="authArea"></span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container grid" style="margin-top:16px">
+
+    <!-- HOME -->
+    <section id="view-home" class="grid">
+      <div class="card">
+        <h1 class="title">Welcome!</h1>
+        <p class="subtitle">Create and take quizzes. Get instant scores and review correct answers. Works offline (saved in your browser).</p>
+        <div class="row" style="margin-top:8px; gap:8px">
+          <button class="btn" data-nav="create">Create a Quiz</button>
+          <button class="btn secondary" data-nav="list">Browse Quizzes</button>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h3 class="title" style="font-size:20px">🚀 Quick Start</h3>
+          <ol class="subtitle" style="line-height:1.7">
+            <li>Register or log in (top‑right).</li>
+            <li>Create a quiz with multiple choice questions.</li>
+            <li>Share on this device; others can take and score instantly.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3 class="title" style="font-size:20px">📱 Mobile‑ready</h3>
+          <p class="subtitle">Responsive UI adapts to phones and tablets. Use <span class="kbd">Ctrl</span>+<span class="kbd">S</span> to save your quiz while building.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ LIST -->
+    <section id="view-list" class="card hidden">
+      <div class="row" style="justify-content:space-between; align-items:center">
+        <h2 class="title">Available Quizzes</h2>
+        <div class="row" style="gap:8px">
+          <input id="searchInput" placeholder="Search quizzes by title…" />
+          <select id="filterMine">
+            <option value="all">All</option>
+            <option value="mine">My quizzes</option>
+          </select>
+        </div>
+      </div>
+      <div id="quizList" class="list" style="margin-top:12px"></div>
+    </section>
+
+    <!-- CREATE QUIZ -->
+    <section id="view-create" class="hidden">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2 class="title">Create a New Quiz</h2>
+          <div class="grid">
+            <div>
+              <label for="quizTitle">Quiz Title</label>
+              <input id="quizTitle" placeholder="e.g., JavaScript Basics" />
+            </div>
+            <div>
+              <label for="quizDesc">Description</label>
+              <textarea id="quizDesc" rows="2" placeholder="Short summary…"></textarea>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px; gap:8px">
+            <button id="saveQuizBtn" class="btn">Save Quiz</button>
+            <button id="resetQuizBtn" class="btn ghost" title="Clears form">Reset</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="title" style="font-size:20px">Add Questions</h3>
+          <form id="questionForm" class="grid" onsubmit="return false;">
+            <div>
+              <label>Question</label>
+              <textarea id="qText" rows="2" placeholder="Type your question…"></textarea>
+            </div>
+            <div class="options">
+              <div class="option"><input type="radio" name="correct" value="0" /> <input class="grow" id="opt0" placeholder="Option 1 (correct? select radio)" /></div>
+              <div class="option"><input type="radio" name="correct" value="1" /> <input class="grow" id="opt1" placeholder="Option 2" /></div>
+              <div class="option"><input type="radio" name="correct" value="2" /> <input class="grow" id="opt2" placeholder="Option 3" /></div>
+              <div class="option"><input type="radio" name="correct" value="3" /> <input class="grow" id="opt3" placeholder="Option 4" /></div>
+            </div>
+            <div class="row" style="gap:8px">
+              <button id="addQBtn" class="btn">Add Question</button>
+              <button id="clearQBtn" class="btn secondary" type="button">Clear</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="title" style="font-size:20px">Questions in this Quiz</h3>
+        <div id="questionsPreview" class="list"></div>
+      </div>
+    </section>
+
+    <!-- TAKE QUIZ -->
+    <section id="view-take" class="hidden">
+      <div class="card" id="takeHeader">
+        <div class="row" style="justify-content:space-between; align-items:center">
+          <div>
+            <div class="pill" id="takeMeta">Loading…</div>
+            <h2 id="takeTitle" class="title" style="margin:6px 0 0"></h2>
+            <p id="takeDesc" class="subtitle"></p>
+          </div>
+          <button class="btn secondary" data-nav="list">Exit</button>
+        </div>
+        <div class="progress-wrap" style="margin-top:12px"><div id="progressBar" class="progress" style="width:0%"></div></div>
+      </div>
+
+      <div class="card" id="questionCard"></div>
+
+      <div class="row" style="justify-content:space-between">
+        <button id="prevBtn" class="btn ghost">◀ Prev</button>
+        <div class="row" style="gap:8px">
+          <button id="nextBtn" class="btn">Next ▶</button>
+          <button id="submitBtn" class="btn" style="display:none">Submit Quiz</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="view-results" class="hidden">
+      <div class="card" id="resultsSummary"></div>
+      <div class="card" id="resultsBreakdown"></div>
+      <div class="row" style="gap:8px">
+        <button class="btn secondary" data-nav="list">Back to Quizzes</button>
+        <button class="btn" id="retakeBtn">Retake</button>
+      </div>
+    </section>
+
+    <!-- AUTH -->
+    <section id="view-auth" class="hidden">
+      <div class="grid grid-2">
+        <div class="card">
+          <h2 class="title">Log In</h2>
+          <div class="grid">
+            <div><label>Username</label><input id="loginUser" /></div>
+            <div><label>Password</label><input id="loginPass" type="password" /></div>
+          </div>
+          <div class="row" style="margin-top:12px; gap:8px">
+            <button id="loginBtn" class="btn">Log In</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="title">Register</h2>
+          <div class="grid">
+            <div><label>Username</label><input id="regUser" /></div>
+            <div><label>Password</label><input id="regPass" type="password" /></div>
+          </div>
+          <div class="row" style="margin-top:12px; gap:8px">
+            <button id="registerBtn" class="btn">Create Account</button>
+          </div>
+          <p class="subtitle" style="margin-top:8px">Demo only: credentials are stored <em>unencrypted</em> in your browser.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer subtitle">Made for demo/learning • Data stays in your browser LocalStorage • No server required</div>
+  </main>
+
+  <script>
+    // ========= Storage Helpers =========
+    const LS_USERS_KEY = 'oq_users';
+    const LS_QUIZZES_KEY = 'oq_quizzes';
+    const LS_CURR_USER_KEY = 'oq_currentUser';
+
+    const store = {
+      get users(){ return JSON.parse(localStorage.getItem(LS_USERS_KEY) || '[]'); },
+      set users(v){ localStorage.setItem(LS_USERS_KEY, JSON.stringify(v)); },
+      get quizzes(){ return JSON.parse(localStorage.getItem(LS_QUIZZES_KEY) || '[]'); },
+      set quizzes(v){ localStorage.setItem(LS_QUIZZES_KEY, JSON.stringify(v)); },
+      get currentUser(){ return JSON.parse(localStorage.getItem(LS_CURR_USER_KEY) || 'null'); },
+      set currentUser(v){ localStorage.setItem(LS_CURR_USER_KEY, JSON.stringify(v)); },
+    };
+
+    function uid(){ return 'q_' + Math.random().toString(36).slice(2, 10); }
+    function nowISO(){ return new Date().toISOString(); }
+
+    // ========= Auth =========
+    function register(username, password){
+      username = (username||'').trim();
+      password = (password||'').trim();
+      if(!username || !password) return {ok:false, msg:'Username & password required'};
+      const users = store.users;
+      if(users.find(u => u.username.toLowerCase() === username.toLowerCase())){
+        return {ok:false, msg:'Username already exists'};
+      }
+      users.push({username, password});
+      store.users = users;
+      return {ok:true, msg:'Account created. You can log in now.'};
+    }
+
+    function login(username, password){
+      const user = store.users.find(u => u.username === username && u.password === password);
+      if(!user) return {ok:false, msg:'Invalid credentials'};
+      store.currentUser = {username: user.username};
+      return {ok:true};
+    }
+
+    function logout(){ store.currentUser = null; renderAuthArea(); show('home'); }
+
+    // ========= Navigation =========
+    const views = ['home','list','create','take','results','auth'];
+    function show(name){
+      views.forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
+      document.getElementById('view-'+name).classList.remove('hidden');
+      if(name==='list') renderQuizList();
+      if(name==='create') renderQuestionsPreview();
+    }
+
+    document.querySelectorAll('[data-nav]').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        const dest = btn.dataset.nav;
+        if(dest==='create' && !store.currentUser){ return show('auth'); }
+        show(dest);
+      })
+    });
+
+    // Auth area in navbar
+    function renderAuthArea(){
+      const area = document.getElementById('authArea');
+      const user = store.currentUser;
+      if(user){
+        area.innerHTML = `
+          <span class="pill">Signed in as <strong>@${user.username}</strong></span>
+          <button class="btn" id="logoutBtn">Logout</button>
+        `;
+        document.getElementById('logoutBtn').onclick = logout;
+      }else{
+        area.innerHTML = `<button class="btn" data-nav="auth">Login / Register</button>`;
+        area.querySelector('[data-nav="auth"]').onclick = ()=> show('auth');
+      }
+    }
+
+    // ========= Create Quiz =========
+    const state = { draft: { title:'', desc:'', questions: [] } };
+
+    document.getElementById('addQBtn').addEventListener('click', ()=>{
+      const text = document.getElementById('qText').value.trim();
+      const opts = [0,1,2,3].map(i => document.getElementById('opt'+i).value.trim());
+      const correctEl = document.querySelector('input[name="correct"]:checked');
+      if(!text) return alert('Enter a question.');
+      if(opts.some(o => !o)) return alert('Fill all four options.');
+      if(!correctEl) return alert('Select the correct option using the radio button.');
+      state.draft.questions.push({ text, options: opts, correctIndex: Number(correctEl.value) });
+      document.getElementById('questionForm').reset();
+      renderQuestionsPreview();
+    });
+
+    document.getElementById('clearQBtn').addEventListener('click', ()=>{
+      document.getElementById('questionForm').reset();
+    });
+
+    document.getElementById('saveQuizBtn').addEventListener('click', ()=>{
+      const title = document.getElementById('quizTitle').value.trim();
+      const desc = document.getElementById('quizDesc').value.trim();
+      if(!store.currentUser) return show('auth');
+      if(!title) return alert('Quiz title is required');
+      if(state.draft.questions.length === 0) return alert('Add at least one question');
+      const quizzes = store.quizzes;
+      const quiz = { id: uid(), title, desc, questions: state.draft.questions, author: store.currentUser.username, createdAt: nowISO() };
+      quizzes.unshift(quiz);
+      store.quizzes = quizzes;
+      // reset draft
+      state.draft = { title:'', desc:'', questions: [] };
+      document.getElementById('quizTitle').value='';
+      document.getElementById('quizDesc').value='';
+      renderQuestionsPreview();
+      alert('Quiz saved! Find it under Quizzes.');
+      show('list');
+    });
+
+    document.getElementById('resetQuizBtn').addEventListener('click', ()=>{
+      if(confirm('Clear the current draft?')){
+        state.draft = { title:'', desc:'', questions: [] };
+        document.getElementById('quizTitle').value='';
+        document.getElementById('quizDesc').value='';
+        renderQuestionsPreview();
+        document.getElementById('questionForm').reset();
+      }
+    });
+
+    function renderQuestionsPreview(){
+      const wrap = document.getElementById('questionsPreview');
+      const qs = state.draft.questions;
+      wrap.innerHTML = qs.length? '' : '<p class="subtitle">No questions added yet.</p>';
+      qs.forEach((q, idx)=>{
+        const div = document.createElement('div');
+        div.className='card';
+        div.innerHTML = `
+          <div class="row" style="justify-content:space-between; align-items:start">
+            <div class="grow">
+              <strong>Q${idx+1}. ${q.text}</strong>
+              <ol style="margin-top:6px; padding-left:18px">
+                ${q.options.map((o,i)=>`<li ${i===q.correctIndex? 'style="color:var(--accent-2); font-weight:600"':''}>${o}${i===q.correctIndex? ' (correct)':''}</li>`).join('')}
+              </ol>
+            </div>
+            <div class="row" style="gap:6px">
+              <button class="btn ghost" data-edit="${idx}">Edit</button>
+              <button class="btn danger" data-del="${idx}">Delete</button>
+            </div>
+          </div>`;
+        wrap.appendChild(div);
+      });
+      // bind buttons
+      wrap.querySelectorAll('[data-del]').forEach(btn=> btn.onclick = ()=>{
+        const i = Number(btn.dataset.del);
+        if(confirm('Delete this question?')){ state.draft.questions.splice(i,1); renderQuestionsPreview(); }
+      });
+      wrap.querySelectorAll('[data-edit]').forEach(btn=> btn.onclick = ()=>{
+        const i = Number(btn.dataset.edit); const q = state.draft.questions[i];
+        document.getElementById('qText').value = q.text;
+        q.options.forEach((o,idx)=> document.getElementById('opt'+idx).value = o);
+        document.querySelectorAll('input[name="correct"]').forEach(r=> r.checked = (Number(r.value)===q.correctIndex));
+        state.draft.questions.splice(i,1); // remove and re-add on save
+        renderQuestionsPreview();
+      });
+    }
+
+    // ========= Quiz List =========
+    function renderQuizList(){
+      const list = document.getElementById('quizList');
+      const search = (document.getElementById('searchInput').value||'').toLowerCase();
+      const mine = document.getElementById('filterMine').value==='mine';
+      let quizzes = store.quizzes;
+      if(mine && store.currentUser){ quizzes = quizzes.filter(q=> q.author===store.currentUser.username); }
+      if(search){ quizzes = quizzes.filter(q=> q.title.toLowerCase().includes(search)); }
+      list.innerHTML = '';
+      if(!quizzes.length){ list.innerHTML = '<p class="subtitle">No quizzes found.</p>'; return; }
+      quizzes.forEach(q=>{
+        const item = document.createElement('div');
+        item.className='card';
+        const dt = new Date(q.createdAt);
+        item.innerHTML = `
+          <div class="row" style="justify-content:space-between; align-items:start; gap:12px">
+            <div class="grow">
+              <h3 style="margin:0 0 4px">${q.title}</h3>
+              <p class="subtitle" style="margin:0 0 8px">${q.desc||''}</p>
+              <div class="row" style="gap:8px">
+                <span class="pill">${q.questions.length} questions</span>
+                <span class="pill">By @${q.author}</span>
+                <span class="pill">${dt.toLocaleString()}</span>
+              </div>
+            </div>
+            <div class="row" style="gap:8px">
+              <button class="btn" data-take="${q.id}">Take Quiz</button>
+              ${store.currentUser && store.currentUser.username===q.author ? `<button class="btn danger" data-delq="${q.id}">Delete</button>`:''}
+            </div>
+          </div>`;
+        list.appendChild(item);
+      });
+      list.querySelectorAll('[data-take]').forEach(btn=> btn.onclick = ()=> beginQuiz(btn.dataset.take));
+      list.querySelectorAll('[data-delq]').forEach(btn=> btn.onclick = ()=>{
+        if(confirm('Delete this quiz?')){
+          const id = btn.dataset.delq; const arr = store.quizzes.filter(q=> q.id!==id); store.quizzes = arr; renderQuizList();
+        }
+      })
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderQuizList);
+    document.getElementById('filterMine').addEventListener('change', renderQuizList);
+
+    // ========= Take Quiz =========
+    const take = { quiz:null, i:0, answers:[] };
+
+    function beginQuiz(id){
+      const quiz = store.quizzes.find(q=> q.id===id);
+      if(!quiz){ alert('Quiz not found'); return; }
+      take.quiz = quiz; take.i = 0; take.answers = new Array(quiz.questions.length).fill(null);
+      document.getElementById('takeTitle').textContent = quiz.title;
+      document.getElementById('takeDesc').textContent = quiz.desc||'';
+      document.getElementById('takeMeta').innerHTML = `<span class="pill">${quiz.questions.length} questions</span> <span class="pill">By @${quiz.author}</span>`;
+      show('take');
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      const q = take.quiz.questions[take.i];
+      const answered = take.answers[take.i];
+      const total = take.quiz.questions.length;
+      document.getElementById('progressBar').style.width = `${((take.i)/total)*100}%`;
+      const card = document.getElementById('questionCard');
+      card.innerHTML = `
+        <div>
+          <div class="row" style="justify-content:space-between; align-items:center">
+            <h3 style="margin:0">Q${take.i+1} of ${total}</h3>
+            <span class="tag">Select one option</span>
+          </div>
+          <p style="margin:8px 0 12px; font-size:18px">${q.text}</p>
+          <div class="list">
+            ${q.options.map((o,idx)=>`
+              <label class="option" style="cursor:pointer">
+                <input type="radio" name="ans" value="${idx}" ${answered===idx? 'checked':''} />
+                <div>${o}</div>
+              </label>`).join('')}
+          </div>
+        </div>
+      `;
+      document.querySelectorAll('input[name="ans"]').forEach(r=> r.onchange = ()=>{
+        take.answers[take.i] = Number(r.value);
+        updateNavButtons();
+      });
+      updateNavButtons();
+    }
+
+    function updateNavButtons(){
+      const isLast = take.i === take.quiz.questions.length-1;
+      document.getElementById('submitBtn').style.display = isLast? 'inline-block':'none';
+      document.getElementById('nextBtn').style.display = isLast? 'none':'inline-block';
+      document.getElementById('prevBtn').disabled = take.i===0;
+    }
+
+    document.getElementById('prevBtn').onclick = ()=>{ if(take.i>0){ take.i--; renderQuestion(); } };
+    document.getElementById('nextBtn').onclick = ()=>{ if(take.i<take.quiz.questions.length-1){ take.i++; renderQuestion(); } };
+    document.getElementById('submitBtn').onclick = ()=>{
+      if(take.answers.some(a=> a===null)){
+        if(!confirm('Some questions are unanswered. Submit anyway?')) return;
+      }
+      const {score, total, detail} = grade(take.quiz, take.answers);
+      showResults(score, total, detail);
+      show('results');
+    };
+
+    function grade(quiz, answers){
+      const detail = quiz.questions.map((q,idx)=>{
+        const correct = q.correctIndex;
+        const user = answers[idx];
+        return { q: q.text, options: q.options, correct, user, isCorrect: user===correct };
+      });
+      const score = detail.filter(d=> d.isCorrect).length;
+      return { score, total: quiz.questions.length, detail };
+    }
+
+    function showResults(score, total, detail){
+      const pct = Math.round((score/total)*100);
+      document.getElementById('resultsSummary').innerHTML = `
+        <h2 class="title" style="margin:0 0 6px">Your Score</h2>
+        <div class="row" style="gap:12px; align-items:center">
+          <div style="font-size:42px; font-weight:800">${score} / ${total}</div>
+          <div class="pill">${pct}%</div>
+        </div>
+        <p class="subtitle" style="margin-top:6px">${pct>=70? 'Great job!' : pct>=50? 'Nice attempt—review the answers below.' : 'Keep practicing! Review the correct answers below.'}</p>
+      `;
+      const wrap = document.getElementById('resultsBreakdown');
+      wrap.innerHTML = '<h3 class="title" style="font-size:20px">Answer Review</h3>';
+      detail.forEach((d, i)=>{
+        const block = document.createElement('div');
+        block.className = 'card';
+        block.style.background = d.isCorrect? 'rgba(124,250,162,.08)' : 'rgba(255,107,107,.08)';
+        block.innerHTML = `
+          <strong>Q${i+1}. ${d.q}</strong>
+          <ol style="margin-top:6px; padding-left:18px">
+            ${d.options.map((o,idx)=>{
+              const isC = idx===d.correct;
+              const isU = idx===d.user;
+              const badge = isC? '✅ Correct' : (isU? '✖ Your choice' : '');
+              const style = isC? 'color:var(--accent-2); font-weight:600' : (isU? 'color:var(--danger);' : '');
+              return `<li style="${style}">${o} ${badge? `<span class='tag' style='margin-left:6px'>${badge}</span>`:''}</li>`;
+            }).join('')}
+          </ol>
+        `;
+        wrap.appendChild(block);
+      });
+      document.getElementById('retakeBtn').onclick = ()=>{ beginQuiz(take.quiz.id); };
+    }
+
+    // ========= Auth bindings =========
+    document.getElementById('registerBtn').onclick = ()=>{
+      const u = document.getElementById('regUser').value; const p = document.getElementById('regPass').value;
+      const res = register(u,p); alert(res.msg || (res.ok?'Registered!':'')); if(res.ok) show('auth');
+    };
+    document.getElementById('loginBtn').onclick = ()=>{
+      const u = document.getElementById('loginUser').value; const p = document.getElementById('loginPass').value;
+      const res = login(u,p); if(!res.ok) return alert(res.msg);
+      renderAuthArea(); show('home');
+    };
+
+    // ========= Init =========
+    renderAuthArea();
+    show('home');
+
+    // Seed sample data on first run
+    if(store.quizzes.length===0){
+      store.quizzes = [
+        { id: uid(), title:'General Knowledge', desc:'A tiny warm‑up quiz', author:'system', createdAt: nowISO(), questions:[
+          {text:'Which planet is known as the Red Planet?', options:['Earth','Mars','Jupiter','Venus'], correctIndex:1},
+          {text:'HTML stands for?', options:['Hyperlinks and Text Markup Language','Home Tool Markup Language','HyperText Markup Language','Hyper Tool Multi Language'], correctIndex:2},
+          {text:'2 + 2 × 2 = ?', options:['6','8','4','10'], correctIndex:0},
+        ]}
+      ];
+    }
+  </script>
+</body>
+</html>
